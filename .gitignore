@@ -1,0 +1,12 @@
+@"
+node_modules/
+expenses.csv
+.tmp/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.env
+.env.local
+"@ | Out-File -Encoding utf8 .gitignore

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ReceiptLedger</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<header>
+  <h1>ReceiptLedger</h1>
+  <p class="tagline">Receipt → structured expense row. Runs locally on your machine.</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>1. Pick a receipt</h2>
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept="image/*" hidden />
+      <p><strong>Click</strong> or drop an image here</p>
+      <p class="hint">PNG · JPG · WEBP</p>
+    </div>
+    <div class="preview" id="preview" hidden>
+      <img id="previewImg" alt="" />
+      <button class="btn ghost" id="clearBtn">Remove</button>
+    </div>
+    <button class="btn primary" id="runBtn" disabled>Extract &amp; structure</button>
+  </section>
+
+  <section class="card" id="statusCard">
+    <h2>2. Status</h2>
+    <pre class="log" id="log">Ready.</pre>
+  </section>
+
+  <section class="card" id="resultCard" hidden>
+    <h2>3. Result</h2>
+    <div class="result-head">
+      <div>
+        <div class="merchant" id="rMerchant">—</div>
+        <div class="date" id="rDate">—</div>
+      </div>
+      <div class="total">
+        <span class="total-label">Total</span>
+        <span class="total-value" id="rTotal">—</span>
+      </div>
+    </div>
+    <table class="items">
+      <thead><tr><th>Item</th><th class="num">Price</th></tr></thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Ledger</h2>
+      <div>
+        <span id="rowCount" class="muted">0 rows</span>
+        <button class="btn ghost" id="refreshBtn">Refresh</button>
+        <button class="btn ghost danger" id="clearLedgerBtn">Clear</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table class="items ledger">
+        <thead><tr><th>Date</th><th>Merchant</th><th>Item</th><th class="num">Price</th></tr></thead>
+        <tbody id="ledgerBody">
+          <tr class="empty"><td colspan="4">No entries yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>
