@@ -185,3 +185,94 @@ main {
 }
 .ledger td:first-child { font-family: var(--mono); font-size: 13px; color: var(--dim); }
 .table-scroll { max-height: 320px; overflow-y: auto; }
+
+/* ── Footer ──────────────────────────────────────────── */
+.app-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 16px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--dim);
+  margin-top: 40px;
+}
+
+.footer-left,
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.footer-brand {
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.footer-dot {
+  color: var(--border);
+  user-select: none;
+}
+
+.app-footer a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.app-footer a:hover {
+  color: #6ea3ff;
+  text-decoration: underline;
+}
+
+/* Live "on-device" badge with a small pulsing dot */
+.on-device-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(110, 231, 183, 0.08);
+  border: 1px solid rgba(110, 231, 183, 0.25);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.7);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(110, 231, 183, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(110, 231, 183, 0);
+  }
+}
+
+/* Mobile: stack the two halves */
+@media (max-width: 700px) {
+  .app-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px 20px;
+  }
+  .footer-right {
+    font-size: 12px;
+  }
+}
