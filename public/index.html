@@ -3,40 +3,88 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ReceiptLedger</title>
+<title>InvoiceLedger — On-device Invoice Extraction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 
-<header>
-  <h1>Invoice ledger</h1>
-  <p class="tagline">Invoice → structured expense row. Runs locally on your machine.</p>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-glow" aria-hidden="true"></div>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 4h16v16H4z"/>
+        <path d="M8 8h8M8 12h8M8 16h5"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <h1>InvoiceLedger</h1>
+      <p class="tagline">Invoice → structured expense row · runs entirely on your machine</p>
+    </div>
+  </div>
+  <div class="header-badge">
+    <span class="pulse"></span>
+    <span>On-device</span>
+  </div>
 </header>
 
 <main>
-  <section class="card">
-    <h2>1. Pick an invoice</h2>
-    <div class="dropzone" id="dropzone">
+  <section class="card" id="uploadCard">
+    <div class="card-head">
+      <h2><span class="step">01</span> Pick an invoice</h2>
+    </div>
+
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload invoice image">
       <input type="file" id="fileInput" accept="image/*" hidden />
-      <p><strong>Click</strong> or drop an image here</p>
-      <p class="hint">PNG · JPG · WEBP</p>
+      <div class="dropzone-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 16V4M7 9l5-5 5 5"/>
+          <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+        </svg>
+      </div>
+      <p class="dropzone-title"><strong>Click to upload</strong> or drag &amp; drop</p>
+      <p class="hint">PNG · JPG · WEBP · up to ~10 MB</p>
     </div>
+
     <div class="preview" id="preview" hidden>
-      <img id="previewImg" alt="" />
-      <button class="btn ghost" id="clearBtn">Remove</button>
+      <div class="preview-frame">
+        <img id="previewImg" alt="Selected invoice" />
+        <button class="icon-btn" id="clearBtn" title="Remove image" aria-label="Remove image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
     </div>
-    <button class="btn primary" id="runBtn" disabled>Extract &amp; structure</button>
+
+    <button class="btn primary" id="runBtn" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+        <path d="M5 3l14 9-14 9V3z"/>
+      </svg>
+      <span>Extract &amp; structure</span>
+    </button>
   </section>
 
   <section class="card" id="statusCard">
-    <h2>2. Status</h2>
+    <div class="card-head">
+      <h2><span class="step">02</span> Status</h2>
+      <span class="status-dot" id="statusDot" data-state="idle"></span>
+    </div>
     <pre class="log" id="log">Ready.</pre>
   </section>
 
   <section class="card" id="resultCard" hidden>
-    <h2>3. Result</h2>
+    <div class="card-head">
+      <h2><span class="step">03</span> Result</h2>
+    </div>
+
     <div class="result-head">
-      <div>
+      <div class="result-meta">
         <div class="merchant" id="rMerchant">—</div>
         <div class="date" id="rDate">—</div>
       </div>
@@ -45,24 +93,39 @@
         <span class="total-value" id="rTotal">—</span>
       </div>
     </div>
-    <table class="items">
-      <thead><tr><th>Item</th><th class="num">Price</th></tr></thead>
-      <tbody id="itemsBody"></tbody>
-    </table>
+
+    <div class="table-scroll">
+      <table class="items">
+        <thead><tr><th>Item</th><th class="num">Price</th></tr></thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+    </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="ledgerCard">
     <div class="card-head">
-      <h2>Ledger</h2>
-      <div>
+      <h2><span class="step">04</span> Ledger</h2>
+      <div class="actions">
         <span id="rowCount" class="muted">0 rows</span>
-        <button class="btn ghost" id="refreshBtn">Refresh</button>
-        <button class="btn ghost danger" id="clearLedgerBtn">Clear</button>
+        <button class="btn ghost" id="refreshBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+            <path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>
+          </svg>
+          Refresh
+        </button>
+        <button class="btn ghost danger" id="clearLedgerBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>
+          </svg>
+          Clear
+        </button>
       </div>
     </div>
-    <div class="table-scroll">
+    <div class="table-scroll tall">
       <table class="items ledger">
-        <thead><tr><th>Date</th><th>Merchant</th><th>Item</th><th class="num">Price</th></tr></thead>
+        <thead>
+          <tr><th>Date</th><th>Merchant</th><th>Item</th><th class="num">Price</th></tr>
+        </thead>
         <tbody id="ledgerBody">
           <tr class="empty"><td colspan="4">No entries yet.</td></tr>
         </tbody>
@@ -70,9 +133,10 @@
     </div>
   </section>
 </main>
+
 <footer class="app-footer">
   <div class="footer-left">
-    <span class="footer-brand">ReceiptLedger</span>
+    <span class="footer-brand">InvoiceLedger</span>
     <span class="footer-dot">·</span>
     <span>Built by Mansuwa Banjade</span>
   </div>

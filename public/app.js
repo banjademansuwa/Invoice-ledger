@@ -9,6 +9,7 @@ const previewImg = $("previewImg");
 const clearBtn   = $("clearBtn");
 const runBtn     = $("runBtn");
 const logEl      = $("log");
+const statusDot  = $("statusDot");
 
 const resultCard = $("resultCard");
 const rMerchant  = $("rMerchant");
@@ -25,6 +26,10 @@ let selectedFile = null;
 let busy = false;
 
 // ── Logging ──────────────────────────────────────────────
+function setStatus(state) {
+  if (statusDot) statusDot.dataset.state = state;
+}
+
 function log(msg, cls = "") {
   const line = document.createElement("div");
   if (cls) line.className = cls;
@@ -33,10 +38,10 @@ function log(msg, cls = "") {
   logEl.appendChild(line);
   logEl.scrollTop = logEl.scrollHeight;
 }
-const ok   = (m) => log("✓ " + m, "ok");
-const err  = (m) => log("✗ " + m, "err");
-const warn = (m) => log("! " + m, "warn");
-function reset() { logEl.textContent = ""; }
+const ok   = (m) => { log("✓ " + m, "ok");   setStatus("ok");   };
+const err  = (m) => { log("✗ " + m, "err");  setStatus("err");  };
+const warn = (m) => { log("! " + m, "warn"); setStatus("idle"); };
+function reset() { logEl.textContent = ""; setStatus("idle"); }
 
 // ── File selection ───────────────────────────────────────
 function pick(file) {
@@ -55,11 +60,18 @@ function clearFile() {
   preview.hidden = true;
   fileInput.value = "";
   runBtn.disabled = true;
+  warn("Image removed.");
 }
 
 dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
 fileInput.addEventListener("change", (e) => pick(e.target.files?.[0]));
-clearBtn.addEventListener("click", clearFile);
+clearBtn.addEventListener("click", (e) => { e.stopPropagation(); clearFile(); });
 
 ["dragenter", "dragover"].forEach((ev) =>
   dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.add("over"); })
@@ -76,8 +88,11 @@ async function run() {
   if (busy || !selectedFile) return;
   busy = true;
   runBtn.disabled = true;
-  runBtn.textContent = "Working…";
+  const label = runBtn.querySelector("span") || runBtn;
+  const original = label.textContent;
+  label.textContent = "Working…";
   reset();
+  setStatus("busy");
   log("Uploading image…");
 
   const t0 = performance.now();
@@ -103,7 +118,7 @@ async function run() {
   } finally {
     busy = false;
     runBtn.disabled = false;
-    runBtn.textContent = "Extract & structure";
+    label.textContent = original;
   }
 }
 
