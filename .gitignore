@@ -1,12 +1,22 @@
-@"
+# Dependencies
 node_modules/
+
+# Personal data — receipts and the ledger they produce
 expenses.csv
 .tmp/
-*.log
+samples/*.mp3
+samples/*.m4a
+samples/*.wav
+samples/*.webm
+
+# Keep the test fixture
+!samples/test-receipt.png
+
+# OS / editor junk
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+*.log
 .env
 .env.local
-"@ | Out-File -Encoding utf8 .gitignore

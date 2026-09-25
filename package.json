@@ -1,14 +1,27 @@
 {
-  "name": "receipt-ledger",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "invoice-ledger",
+  "version": "1.1.0",
+  "description": "On-device receipt and voice → structured expense rows via QVAC SDK. No cloud, no API keys.",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "cli": "node app.js",
+    "test": "echo \"No tests yet\" && exit 0"
   },
-  "keywords": [],
-  "author": "Mansuwa banjade",
-  "license": "ISC",
+  "keywords": [
+    "qvac",
+    "on-device",
+    "llm",
+    "ocr",
+    "whisper",
+    "speech-to-text",
+    "privacy",
+    "receipts",
+    "expense-tracker",
+    "llama"
+  ],
+  "author": "Mansuwa Banjade",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "@qvac/sdk": "^0.19.1"
