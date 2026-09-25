@@ -24,7 +24,7 @@
     </div>
     <div class="brand-text">
       <h1>InvoiceLedger</h1>
-      <p class="tagline">Invoice → structured expense row · runs entirely on your machine</p>
+      <p class="tagline">Invoice or voice → structured expense row · runs entirely on your machine</p>
     </div>
   </div>
   <div class="header-badge">
@@ -36,38 +36,99 @@
 <main>
   <section class="card" id="uploadCard">
     <div class="card-head">
-      <h2><span class="step">01</span> Pick an invoice</h2>
+      <h2><span class="step">01</span> Add an expense</h2>
     </div>
 
-    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload invoice image">
-      <input type="file" id="fileInput" accept="image/*" hidden />
-      <div class="dropzone-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 16V4M7 9l5-5 5 5"/>
-          <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="image" role="tab" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="tab-icon">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="9" cy="9" r="2"/>
+          <path d="M21 15l-5-5L5 21"/>
         </svg>
-      </div>
-      <p class="dropzone-title"><strong>Click to upload</strong> or drag &amp; drop</p>
-      <p class="hint">PNG · JPG · WEBP · up to ~10 MB</p>
+        Image
+      </button>
+      <button class="tab" data-tab="voice" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="tab-icon">
+          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/>
+        </svg>
+        Voice
+      </button>
     </div>
 
-    <div class="preview" id="preview" hidden>
-      <div class="preview-frame">
-        <img id="previewImg" alt="Selected invoice" />
-        <button class="icon-btn" id="clearBtn" title="Remove image" aria-label="Remove image">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 6L6 18M6 6l12 12"/>
+    <!-- ── Image tab panel ─────────────────────────────── -->
+    <div class="tab-panel active" data-panel="image">
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload invoice image">
+        <input type="file" id="fileInput" accept="image/*" hidden />
+        <div class="dropzone-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 16V4M7 9l5-5 5 5"/>
+            <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
           </svg>
-        </button>
+        </div>
+        <p class="dropzone-title"><strong>Click to upload</strong> or drag &amp; drop</p>
+        <p class="hint">PNG · JPG · WEBP · up to ~10 MB</p>
       </div>
+
+      <div class="preview" id="preview" hidden>
+        <div class="preview-frame">
+          <img id="previewImg" alt="Selected invoice" />
+          <button class="icon-btn" id="clearBtn" title="Remove image" aria-label="Remove image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn primary" id="runBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+          <path d="M5 3l14 9-14 9V3z"/>
+        </svg>
+        <span>Extract &amp; structure</span>
+      </button>
     </div>
 
-    <button class="btn primary" id="runBtn" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
-        <path d="M5 3l14 9-14 9V3z"/>
-      </svg>
-      <span>Extract &amp; structure</span>
-    </button>
+    <!-- ── Voice tab panel ─────────────────────────────── -->
+    <div class="tab-panel" data-panel="voice">
+      <div class="dropzone" id="audioDropzone" tabindex="0" role="button" aria-label="Upload audio file">
+        <input type="file" id="audioFileInput" accept="audio/*,video/mp4,.mp3,.wav,.m4a,.ogg,.webm" hidden />
+        <div class="dropzone-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V6l12-2v12"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+          </svg>
+        </div>
+        <p class="dropzone-title"><strong>Click to upload</strong> or drag &amp; drop audio</p>
+        <p class="hint">MP3 · WAV · M4A · OGG · WEBM · MP4</p>
+      </div>
+
+      <div class="preview" id="audioPreview" hidden>
+        <div class="preview-frame audio-frame">
+          <audio id="audioPlayer" controls></audio>
+          <button class="icon-btn" id="clearAudioBtn" title="Remove audio" aria-label="Remove audio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <p class="audio-filename" id="audioFileName"></p>
+      </div>
+
+      <button class="btn primary" id="runAudioBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+          <path d="M5 3l14 9-14 9V3z"/>
+        </svg>
+        <span>Transcribe &amp; structure</span>
+      </button>
+
+      <p class="voice-example">
+        <strong>Example:</strong> “I bought a MacBook at 1200 from Apple Store
+        and a JBL speaker from Sungold at 2000.”
+      </p>
+    </div>
   </section>
 
   <section class="card" id="statusCard">
@@ -83,23 +144,7 @@
       <h2><span class="step">03</span> Result</h2>
     </div>
 
-    <div class="result-head">
-      <div class="result-meta">
-        <div class="merchant" id="rMerchant">—</div>
-        <div class="date" id="rDate">—</div>
-      </div>
-      <div class="total">
-        <span class="total-label">Total</span>
-        <span class="total-value" id="rTotal">—</span>
-      </div>
-    </div>
-
-    <div class="table-scroll">
-      <table class="items">
-        <thead><tr><th>Item</th><th class="num">Price</th></tr></thead>
-        <tbody id="itemsBody"></tbody>
-      </table>
-    </div>
+    <div id="resultBody"></div>
   </section>
 
   <section class="card" id="ledgerCard">

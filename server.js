@@ -1,19 +1,26 @@
 // Tiny HTTP server. No Express, no dependencies — just Node's built-in http
-// module. Serves the static client from ./public and exposes one API:
-//   POST /api/process  (multipart/form-data with an "image" field)
-//     → runs your existing OCR + LLM pipeline
-//     → appends to expenses.csv
-//     → returns the structured record as JSON
+// module. Serves the static client from ./public and exposes:
+//
+//   POST /api/process        (multipart/form-data with an "image" field)
+//     → OCR + LLM pipeline → appends to expenses.csv → returns one record
+//
+//   POST /api/process-audio  (multipart/form-data with an "audio" field)
+//     → Whisper transcribe + LLM pipeline → appends one record per purchase
+//
+//   GET  /api/ledger         → returns all CSV rows as JSON
+//   POST /api/clear          → resets expenses.csv to just its header
 
 import { createServer } from "node:http";
-import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
+import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve, extname, join } from "node:path";
 import { extractText } from "./lib/ocr.js";
 import { structureReceipt } from "./lib/structure.js";
+import { transcribeAudio } from "./lib/speech.js";
+import { structureSpeech } from "./lib/structure-speech.js";
 import { appendRecord, countDataRows } from "./lib/ledger.js";
 
-const PORT = 3000;
+const PORT = 3001;
 const ROOT = resolve(process.cwd());
 const PUBLIC_DIR = join(ROOT, "public");
 const CSV_PATH = join(ROOT, "expenses.csv");
@@ -32,13 +39,21 @@ const MIME = {
   ".webp": "image/webp",
   ".svg":  "image/svg+xml",
   ".ico":  "image/x-icon",
+  ".mp3":  "audio/mpeg",
+  ".wav":  "audio/wav",
+  ".m4a":  "audio/mp4",
+  ".ogg":  "audio/ogg",
+  ".webm": "audio/webm",
 };
 
 // ── Server ──────────────────────────────────────────────
 const server = createServer(async (req, res) => {
   try {
     if (req.method === "POST" && req.url === "/api/process") {
-      return await handleProcess(req, res);
+      return await handleProcessImage(req, res);
+    }
+    if (req.method === "POST" && req.url === "/api/process-audio") {
+      return await handleProcessAudio(req, res);
     }
     if (req.method === "GET" && req.url === "/api/ledger") {
       return await handleLedger(req, res);
@@ -82,26 +97,21 @@ async function serveStatic(req, res) {
   }
 }
 
-// ── POST /api/process ───────────────────────────────────
-async function handleProcess(req, res) {
+// ── POST /api/process (image) ───────────────────────────
+async function handleProcessImage(req, res) {
   const started = Date.now();
-
-  // 1. Read the full body (with size cap)
   const body = await readBody(req, MAX_UPLOAD);
 
-  // 2. Parse multipart/form-data to extract the image
-  const image = parseMultipartImage(body, req.headers["content-type"]);
+  const image = parseMultipartFile(body, req.headers["content-type"], "image");
   if (!image) {
     return send(res, 400, { error: "No image field in request." });
   }
 
-  // 3. Write image to a temp file (your ocr.js expects a path)
   await mkdir(TMP_DIR, { recursive: true });
   const tmpPath = join(TMP_DIR, `receipt-${Date.now()}${image.ext}`);
   await writeFile(tmpPath, image.buffer);
 
   try {
-    // 4. Run your existing pipeline — unchanged
     console.log(`[process] OCR start (${(image.buffer.length / 1024).toFixed(0)} KB)`);
     const rawText = await extractText(tmpPath);
     if (!rawText.trim()) {
@@ -113,11 +123,9 @@ async function handleProcess(req, res) {
     const record = await structureReceipt(rawText);
     console.log(`[process] LLM done, ${record.items.length} items`);
 
-    // 5. Append to CSV using your existing ledger helper
     const added = await appendRecord(CSV_PATH, record);
     const total = await countDataRows(CSV_PATH);
 
-    // 6. Return everything to the client
     const elapsed = ((Date.now() - started) / 1000).toFixed(1);
     send(res, 200, {
       ok: true,
@@ -128,8 +136,64 @@ async function handleProcess(req, res) {
       rawTextPreview: rawText.slice(0, 500),
     });
   } finally {
-    // Clean up temp file
-    try { await (await import("node:fs/promises")).unlink(tmpPath); } catch {}
+    try { await unlink(tmpPath); } catch {}
+  }
+}
+
+// ── POST /api/process-audio (voice) ─────────────────────
+async function handleProcessAudio(req, res) {
+  const started = Date.now();
+  const body = await readBody(req, MAX_UPLOAD);
+
+  const audio = parseMultipartFile(body, req.headers["content-type"], "audio");
+  if (!audio) {
+    return send(res, 400, { error: "No audio field in request." });
+  }
+
+  await mkdir(TMP_DIR, { recursive: true });
+  const tmpPath = join(TMP_DIR, `voice-${Date.now()}${audio.ext}`);
+  await writeFile(tmpPath, audio.buffer);
+
+  try {
+    console.log(`[audio] transcribe start (${(audio.buffer.length / 1024).toFixed(0)} KB, ${audio.ext})`);
+    const transcript = await transcribeAudio(tmpPath);
+    if (!transcript) {
+      return send(res, 422, {
+        error: "Could not understand any speech in the audio. Try a clearer recording.",
+      });
+    }
+    console.log(`[audio] transcript: ${transcript.slice(0, 120)}…`);
+
+    console.log(`[audio] LLM start`);
+    const records = await structureSpeech(transcript);
+    if (!records.length) {
+      return send(res, 422, { error: "No purchases found in the transcript." });
+    }
+console.log(`[audio] LLM done, ${records.length} record(s)`);
+for (const [i, r] of records.entries()) {
+  console.log(`[audio]   record ${i + 1}: merchant="${r.merchant}" total=${r.total} items=${r.items.length}`);
+  for (const it of r.items) {
+    console.log(`[audio]     - ${it.name}: ${it.price}`);
+  }
+}
+
+    let added = 0;
+    for (const rec of records) {
+      added += await appendRecord(CSV_PATH, rec);
+    }
+    const total = await countDataRows(CSV_PATH);
+
+    const elapsed = ((Date.now() - started) / 1000).toFixed(1);
+    send(res, 200, {
+      ok: true,
+      transcript,
+      records,
+      added,
+      total,
+      elapsed,
+    });
+  } finally {
+    try { await unlink(tmpPath); } catch {}
   }
 }
 
@@ -170,9 +234,8 @@ function readBody(req, maxBytes) {
   });
 }
 
-// ── Minimal multipart/form-data parser ──────────────────
-// Extracts the first file field from the body. Good enough for one image.
-function parseMultipartImage(body, contentType) {
+// ── Multipart parser (any field name, image or audio) ───
+function parseMultipartFile(body, contentType, fieldName) {
   if (!contentType || !contentType.includes("multipart/form-data")) return null;
 
   const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/);
@@ -183,23 +246,19 @@ function parseMultipartImage(body, contentType) {
   const parts = splitBuffer(body, boundaryBuf);
 
   for (const part of parts) {
-    // Skip empty parts and the closing "--"
     if (part.length < 4) continue;
-
     const headerEnd = part.indexOf("\r\n\r\n");
     if (headerEnd === -1) continue;
 
     const headers = part.slice(0, headerEnd).toString("utf8");
+    const nameMatch = headers.match(/name="([^"]+)"/i);
+    if (!nameMatch || nameMatch[1] !== fieldName) continue;
     if (!/content-disposition:.*filename=/i.test(headers)) continue;
 
-    // Extract content-type extension
     const ctMatch = headers.match(/content-type:\s*([^\r\n]+)/i);
-    const ct = ctMatch ? ctMatch[1].trim() : "image/jpeg";
-    const ext = ct.includes("png") ? ".png"
-              : ct.includes("webp") ? ".webp"
-              : ".jpg";
+    const ct = ctMatch ? ctMatch[1].trim() : "application/octet-stream";
+    const ext = extFromMime(ct, fieldName);
 
-    // Body is everything after the header block, minus trailing \r\n
     let data = part.slice(headerEnd + 4);
     if (data.length >= 2 && data[data.length - 2] === 0x0d && data[data.length - 1] === 0x0a) {
       data = data.slice(0, -2);
@@ -208,6 +267,21 @@ function parseMultipartImage(body, contentType) {
     return { buffer: data, ext, contentType: ct };
   }
   return null;
+}
+
+function extFromMime(ct, fieldName) {
+  // image
+  if (ct.includes("png")) return ".png";
+  if (ct.includes("webp")) return ".webp";
+  if (ct.includes("jpeg") || ct.includes("jpg")) return ".jpg";
+  // audio
+  if (ct.includes("mpeg") || ct.includes("mp3")) return ".mp3";
+  if (ct.includes("wav")) return ".wav";
+  if (ct.includes("mp4") || ct.includes("m4a")) return ".m4a";
+  if (ct.includes("ogg")) return ".ogg";
+  if (ct.includes("webm")) return ".webm";
+  // fallback by field
+  return fieldName === "audio" ? ".m4a" : ".jpg";
 }
 
 function splitBuffer(buf, delimiter) {
